@@ -11,3 +11,10 @@ cradle:
       config:
         cradle:
           cabal:
+            component: "lib:regex"
+    - path: ./test
+      config:
+        cradle:
+          cabal:
+            component: "test:Regex-test"
+    
