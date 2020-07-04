@@ -11,6 +11,5 @@ data Regex =
     Atom AtomPredicate |
     Concat Regex Regex |
     Or Regex Regex |
-    AtLeast Eagerness Int Regex |
-    Between Eagerness Int Int Regex
+    Repeat Eagerness !Int !Int Regex
     deriving Show
