@@ -8,11 +8,9 @@ module Regex (
     matchingLen,
     findAllRe,
     findNonoverlappingRe,
-    matchRe,
     searchRe,
     findAll,
     findNonoverlapping,
-    match,
     search
 ) where
 
@@ -22,7 +20,6 @@ import Parser
 
 findAll = parseAndThen findAllRe
 findNonoverlapping = parseAndThen findNonoverlappingRe
-match = parseAndThen matchRe
 search = parseAndThen searchRe
 
 parseAndThen :: (Regex -> String -> a) -> String -> String -> Either ParseError a
