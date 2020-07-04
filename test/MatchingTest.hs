@@ -74,16 +74,19 @@ tests = testGroup "Matching" [
             assertEqual findAllReError [Matching 0 0] $ findAllRe re ""    
             assertEqual findAllReError [Matching 0 0, Matching 1 1, Matching 2 2] $ findAllRe re "ab"    
         ) [Lazy, Eager] ++
+
         map (\e -> testCase ("{1, 0} " ++ show e) $ do
             let re = Repeat e 1 (Just 0) (atom 'a')
             assertEqual findAllReError [] $ findAllRe re ""    
             assertEqual findAllReError [] $ findAllRe re "ab"    
         ) [Lazy, Eager] ++
+
         map (\e -> testCase ("{2, 2} " ++ show e) $ do
             let re = Repeat e 2 (Just 2) (atom 'a')
             assertEqual findAllReError [] $ findAllRe re ""    
             assertEqual findAllReError [Matching 0 2, Matching 1 3] $ findAllRe re "aaa"    
         ) [Lazy, Eager] ++
+
         [
             testCase "{2, 4} Eager" $ do
                 let re = Repeat Eager 2 (Just 4) (atom 'a')
@@ -107,6 +110,7 @@ tests = testGroup "Matching" [
                 assertEqual findAllReError [] $ findAllRe re ""
                 assertEqual findAllReError [Matching 0 2, Matching 1 3] $ findAllRe re "aaa"
         ] ++
+        
         map (\e -> testCase ("{1, 4}+Concat " ++ show e) $ do
             let re = Concat (atom 'b') $ Concat (Repeat e 1 (Just 4) (atom 'a')) (atom 'c')
             assertEqual findAllReError [Matching 1 6] $ findAllRe re "ebaaacd"
