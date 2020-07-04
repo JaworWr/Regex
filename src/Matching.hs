@@ -34,7 +34,7 @@ type Fc a = a
 type Sc a = Cursor -> Fc a -> a
 
 decr :: Num a => Maybe a -> Maybe a
-decr = fmap (`subtract` 1)
+decr = fmap $ subtract 1
 
 match :: Regex -> Cursor -> Sc a -> Fc a -> a
 match (Atom ap) cur sc fc = case popChar cur of
