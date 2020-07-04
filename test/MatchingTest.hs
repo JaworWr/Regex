@@ -112,4 +112,13 @@ tests = testGroup "Matching" [
             assertEqual findAllReError [Matching 1 6] $ findAllRe re "ebaaacd"
         ) [Lazy, Eager]
     )
+    ,
+    testCase "Overlapping" $ do
+        let re = Concat (atom 'a') $ Concat (atom 'b') (atom 'a')
+        assertEqual findAllReError [Matching 0 3, Matching 2 5, Matching 4 7] $ findAllRe re "abababa"
+    ,
+    testCase "Nonoverlapping" $ do
+        let re = Concat (atom 'a') $ Concat (atom 'b') (atom 'a')
+        assertEqual "Incorrect findNonoverlappingRe result"
+            [Matching 0 3, Matching 4 7] $ findNonoverlappingRe re "abababa"
     ]

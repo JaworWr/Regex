@@ -27,6 +27,8 @@ test-suite Regex-test
     default-language: Haskell2010
     other-modules:
         MatchingTest
+        DataTypes
+        Matching
     build-depends:
         base >=4.13 && <4.14,
         test-framework >=0.8.2,
