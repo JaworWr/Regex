@@ -10,10 +10,21 @@ matchingLen :: Matching -> Int
 matchingLen m = matchingEnd m - matchingStart m
 
 findAllRe :: Regex -> String -> [Matching]
-findAllRe = undefined
+findAllRe re s = aux (stringToCursor s) where
+    sc cur cur' fc' = maybe [m] ((m:) . aux) $ dropChar cur where
+        m = Matching (curPos cur) (curPos cur')
+    fc cur = maybe [] aux $ dropChar cur
+    aux cur = match re cur (sc cur) (fc cur)
 
 findNonoverlappingRe :: Regex -> String -> [Matching]
-findNonoverlappingRe = undefined
+findNonoverlappingRe re s = aux (stringToCursor s) where
+    sc cur cur' fc'
+        | eos cur' = [m]
+        | otherwise = m:aux cur'
+        where
+            m = Matching (curPos cur) (curPos cur')
+    fc cur = maybe [] aux $ dropChar cur
+    aux cur = match re cur (sc cur) (fc cur)
 
 searchRe :: Regex -> String -> Maybe Matching
 searchRe = (listToMaybe .) . findAllRe

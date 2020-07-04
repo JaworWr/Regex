@@ -21,7 +21,7 @@ data Regex =
     deriving Show
 
 -- String cursor and helper functions
-data Cursor = Cursor { curPos :: !Int, curData :: !String } deriving (Eq, Show)
+data Cursor = Cursor { curPos :: !Int, curData :: String } deriving (Eq, Show)
 
 eos :: Cursor -> Bool
 eos = null . curData
@@ -35,3 +35,6 @@ peekChar = listToMaybe . curData
 
 dropChar :: Cursor -> Maybe Cursor
 dropChar = fmap snd . popChar
+
+stringToCursor :: String -> Cursor
+stringToCursor = Cursor 0
