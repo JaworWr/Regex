@@ -1,3 +1,5 @@
+{-# LANGUAGE LambdaCase #-}
+
 module Parser where
 
 import DataTypes
@@ -5,9 +7,10 @@ import DataTypes
 import Control.Monad.State
 import Control.Monad.Except
 import Text.Printf
+import Data.Char
 
 parse :: String -> Either ParseError Regex
-parse = undefined
+parse = evalStateT (pRegex <* guardEOF) . stringToCursor
 
 data ParseError = ParseError {
     errorPos :: Int,
@@ -46,4 +49,28 @@ pPopChar = do
     put cur'
     return c
 
+guardEOF :: Parser ()
+guardEOF = pPeekChar >>= \case
+    Just c -> do
+        p <- pGetPos
+        throwError . ParseError p $ printf "Unexpected '%c', expected end of input" c
+    Nothing -> return ()
 
+-- Atomic parsers
+pAtomic :: Parser Regex
+pAtomic = pPopChar >>= \case
+    '\\' -> pEscaped
+    '.' -> return . Atom $ AtomPredicate (const True) "wildcard"
+    c -> return . Atom $ AtomPredicate (== c) [c]
+
+pEscaped :: Parser Regex
+pEscaped = pPopChar >>= \case
+    'd' -> return . Atom $ AtomPredicate isDigit "digit"
+    'D' -> return . Atom $ AtomPredicate (not . isDigit) "non-digit"
+    's' -> return . Atom $ AtomPredicate isSpace "whitespace"
+    'S' -> return . Atom $ AtomPredicate (not . isSpace) "non-whitespace"
+    c -> return . Atom $ AtomPredicate (== c) [c]
+
+-- Top level parser
+pRegex :: Parser Regex
+pRegex = undefined 
