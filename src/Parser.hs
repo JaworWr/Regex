@@ -19,14 +19,14 @@ data ParseError = ParseError {
 } deriving (Eq, Show)
 
 data ParseErrorInfo =
-    UnexpectedEOS |
+    Unexpected (Maybe Char) |
     ExpectedGot String (Maybe Char)
     deriving (Eq, Show)
 
 prettyError :: ParseError -> String
 prettyError (ParseError p i) = printf "Parse error at position %d: %s" p $ prettyErrorInfo i where
     prettyErrorInfo :: ParseErrorInfo -> String
-    prettyErrorInfo UnexpectedEOS = "Unexpected end of input"
+    prettyErrorInfo (Unexpected g) = "Unexpected " ++ prettyGot g
     prettyErrorInfo (ExpectedGot e g) = printf "Expected %s, got %s" (prettyExpected e) (prettyGot g)
     prettyExpected [] = "end of input"
     prettyExpected [c] = show c
@@ -52,7 +52,7 @@ pGetPos :: Parser Int
 pGetPos = gets curPos
 
 fromJustWithEOF :: Maybe a -> Parser a
-fromJustWithEOF = maybe (throwParseErrorAtPos UnexpectedEOS) return
+fromJustWithEOF = maybe (throwParseErrorAtPos $ Unexpected Nothing) return
 
 pGetChar :: Parser Char
 pGetChar = pPeekChar >>= fromJustWithEOF
@@ -81,15 +81,25 @@ pAtomic :: Parser Regex
 pAtomic = pPopChar >>= \case
     '\\' -> pEscaped
     '.' -> return . Atom $ AtomPredicate (const True) "wildcard"
-    c -> return . Atom $ AtomPredicate (== c) [c]
+    '(' -> pRegex <* guardChar ')' <* pDropChar
+    c -> return . Atom $ AtomPredicate (== c) $ show c
+
+escapedPredicate :: Char -> Maybe AtomPredicate
+escapedPredicate 'd' = return $ AtomPredicate isDigit "digit"
+escapedPredicate 'D' = return $ AtomPredicate (not . isDigit) "non-digit"
+escapedPredicate 's' = return $ AtomPredicate isSpace "whitespace"
+escapedPredicate 'w' = return $ AtomPredicate isAlpha "word"
+escapedPredicate 'S' = return $ AtomPredicate (not . isSpace) "non-whitespace"
+escapedPredicate 'W' = return $ AtomPredicate (not . isAlpha) "non-word"
+escapedPredicate _ = Nothing
 
 pEscaped :: Parser Regex
-pEscaped = pPopChar >>= \case
-    'd' -> return . Atom $ AtomPredicate isDigit "digit"
-    'D' -> return . Atom $ AtomPredicate (not . isDigit) "non-digit"
-    's' -> return . Atom $ AtomPredicate isSpace "whitespace"
-    'S' -> return . Atom $ AtomPredicate (not . isSpace) "non-whitespace"
-    c -> return . Atom $ AtomPredicate (== c) [c]
+pEscaped = do
+    c <- pPopChar
+    maybe 
+        (return . Atom $ AtomPredicate (== c) $ show c)
+        (return . Atom)
+        (escapedPredicate c)
 
 -- Top level parser
 pRegex :: Parser Regex
