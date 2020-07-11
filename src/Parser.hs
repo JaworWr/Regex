@@ -98,8 +98,8 @@ escapedPredicate :: Char -> Maybe AtomPredicate
 escapedPredicate 'd' = return $ AtomPredicate isDigit "digit"
 escapedPredicate 'D' = return $ AtomPredicate (not . isDigit) "non-digit"
 escapedPredicate 's' = return $ AtomPredicate isSpace "whitespace"
-escapedPredicate 'w' = return $ AtomPredicate isAlpha "word"
 escapedPredicate 'S' = return $ AtomPredicate (not . isSpace) "non-whitespace"
+escapedPredicate 'w' = return $ AtomPredicate isAlpha "word"
 escapedPredicate 'W' = return $ AtomPredicate (not . isAlpha) "non-word"
 escapedPredicate _ = Nothing
 
@@ -125,6 +125,22 @@ pAtomicWithModifier = do
     when rep $ throwParseError repPos MultipleRepeats
     return $ fromMaybe id m a
 
+-- Intermediate parsers
+pConcat :: Parser Regex
+pConcat = pAtomicWithModifier >>= pConcatTail where
+    pConcatTail re = pPeekChar >>= \case
+        Just c
+            | c `elem` ignored -> return re
+            | otherwise -> Concat re <$> pAtomicWithModifier >>= pConcatTail
+        Nothing -> return re
+    ignored = ")|"
+
+pOr :: Parser Regex
+pOr = pConcat >>= pOrTail where
+    pOrTail re = pPeekChar >>= \case
+        Just '|' -> pDropChar >> Or re <$> pConcat >>= pOrTail
+        _ -> return re
+
 -- Top level parser
 pRegex :: Parser Regex
-pRegex = undefined 
+pRegex = pOr 
