@@ -20,7 +20,8 @@ data ParseError = ParseError {
 
 data ParseErrorInfo =
     Unexpected (Maybe Char) |
-    ExpectedGot String (Maybe Char)
+    ExpectedGot String (Maybe Char) |
+    MultipleRepeats 
     deriving (Eq, Show)
 
 prettyError :: ParseError -> String
@@ -28,6 +29,7 @@ prettyError (ParseError p i) = printf "Parse error at position %d: %s" p $ prett
     prettyErrorInfo :: ParseErrorInfo -> String
     prettyErrorInfo (Unexpected g) = "Unexpected " ++ prettyGot g
     prettyErrorInfo (ExpectedGot e g) = printf "Expected %s, got %s" (prettyExpected e) (prettyGot g)
+    prettyErrorInfo MultipleRepeats = "Multiple repeat modifiers"
     prettyExpected [] = "end of input"
     prettyExpected [c] = show c
     prettyExpected [c1, c2] = show c1 ++ " or " ++ show c2
@@ -77,6 +79,14 @@ guardChar c = do
     when (c' /= Just c) . throwParseErrorAtPos $ ExpectedGot [c] c'
 
 -- Atomic parsers
+pEscaped :: Parser Regex
+pEscaped = do
+    c <- pPopChar
+    maybe 
+        (return . Atom $ AtomPredicate (== c) $ show c)
+        (return . Atom)
+        (escapedPredicate c)
+
 pAtomic :: Parser Regex
 pAtomic = pPopChar >>= \case
     '\\' -> pEscaped
@@ -93,13 +103,27 @@ escapedPredicate 'S' = return $ AtomPredicate (not . isSpace) "non-whitespace"
 escapedPredicate 'W' = return $ AtomPredicate (not . isAlpha) "non-word"
 escapedPredicate _ = Nothing
 
-pEscaped :: Parser Regex
-pEscaped = do
-    c <- pPopChar
-    maybe 
-        (return . Atom $ AtomPredicate (== c) $ show c)
-        (return . Atom)
-        (escapedPredicate c)
+pEagerness :: Parser Eagerness
+pEagerness = pPeekChar >>= \case
+    Just '?' -> pDropChar >> return Lazy
+    _ -> return Eager
+
+pModifier :: Parser (Maybe (Regex -> Regex))
+pModifier = pPeekChar >>= \case
+    Just '*' -> pDropChar >> pEagerness >>= \e -> return . Just $ Repeat e 0 Nothing
+    Just '+' -> pDropChar >> pEagerness >>= \e -> return . Just $ Repeat e 1 Nothing
+    Just '?' -> pDropChar >> pEagerness >>= \e -> return . Just $ Repeat e 0 (Just 1)
+    _ -> return Nothing
+
+pAtomicWithModifier :: Parser Regex
+pAtomicWithModifier = do
+    a <- pAtomic
+    m <- pModifier
+    -- check if we have only one repeat modifier
+    repPos <- pGetPos
+    rep <- isJust <$> pModifier
+    when rep $ throwParseError repPos MultipleRepeats
+    return $ fromMaybe id m a
 
 -- Top level parser
 pRegex :: Parser Regex
