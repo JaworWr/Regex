@@ -142,9 +142,7 @@ pAtomicWithModifier = do
 pConcat :: Parser Regex
 pConcat = pAtomicWithModifier >>= pConcatTail where
     pConcatTail re = pPeekChar >>= \case
-        Just c
-            | c `elem` ignored -> return re
-            | otherwise -> Concat re <$> pAtomicWithModifier >>= pConcatTail
+        Just c | c `notElem` ignored -> Concat re <$> pAtomicWithModifier >>= pConcatTail
         Nothing -> return re
     ignored = ")|"
 

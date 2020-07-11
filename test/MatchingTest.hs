@@ -10,7 +10,7 @@ import DataTypes
 import Matching
 
 atom :: Char -> Regex
-atom c = Atom (AtomPredicate (== c) [c])
+atom c = Atom (AtomPredicate (== c) (show c))
 
 findAllReError = "Incorrect findAllRe result."
 
