@@ -143,7 +143,7 @@ pConcat :: Parser Regex
 pConcat = pAtomicWithModifier >>= pConcatTail where
     pConcatTail re = pPeekChar >>= \case
         Just c | c `notElem` ignored -> Concat re <$> pAtomicWithModifier >>= pConcatTail
-        Nothing -> return re
+        _ -> return re
     ignored = ")|"
 
 pOr :: Parser Regex
