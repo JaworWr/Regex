@@ -30,8 +30,10 @@ test-suite Regex-test
     hs-source-dirs:   test src
     other-modules:
         MatchingTest
+        ParserTest
         DataTypes
         Matching
+        Parser
 
     default-language: Haskell2010
     build-depends:
