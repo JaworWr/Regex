@@ -15,7 +15,7 @@ data Regex =
     Atom AtomPredicate |
     Concat Regex Regex |
     Or Regex Regex |
-    Repeat Eagerness !Int !(Maybe Int) Regex |
+    Repeat !Int !(Maybe Int) Eagerness Regex |
     BOS |
     EOS
     deriving Show

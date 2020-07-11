@@ -70,49 +70,49 @@ tests = testGroup "Matching" [
     ,
     testGroup "Repeat" (
         map (\e -> testCase ("{0, 0} " ++ show e) $ do
-            let re = Repeat e 0 (Just 0) (atom 'a')
+            let re = Repeat 0 (Just 0) e (atom 'a')
             assertEqual findAllReError [Matching 0 0] $ findAllRe re ""    
             assertEqual findAllReError [Matching 0 0, Matching 1 1, Matching 2 2] $ findAllRe re "ab"    
         ) [Lazy, Eager] ++
 
         map (\e -> testCase ("{1, 0} " ++ show e) $ do
-            let re = Repeat e 1 (Just 0) (atom 'a')
+            let re = Repeat 1 (Just 0) e (atom 'a')
             assertEqual findAllReError [] $ findAllRe re ""    
             assertEqual findAllReError [] $ findAllRe re "ab"    
         ) [Lazy, Eager] ++
 
         map (\e -> testCase ("{2, 2} " ++ show e) $ do
-            let re = Repeat e 2 (Just 2) (atom 'a')
+            let re = Repeat 2 (Just 2) e (atom 'a')
             assertEqual findAllReError [] $ findAllRe re ""    
             assertEqual findAllReError [Matching 0 2, Matching 1 3] $ findAllRe re "aaa"    
         ) [Lazy, Eager] ++
 
         [
             testCase "{2, 4} Eager" $ do
-                let re = Repeat Eager 2 (Just 4) (atom 'a')
+                let re = Repeat 2 (Just 4) Eager (atom 'a')
                 let res = [Matching 1 5, Matching 2 6, Matching 3 6, Matching 4 6, Matching 9 12, Matching 10 12]
                 assertEqual findAllReError res $ findAllRe re "baaaaacadaaae"
                 assertEqual findAllReError [] $ findAllRe re ""
             ,
             testCase "{2, 4} Lazy" $ do
-                let re = Repeat Lazy 2 (Just 4) (atom 'a')
+                let re = Repeat 2 (Just 4) Lazy (atom 'a')
                 let res = [Matching 1 3, Matching 2 4, Matching 3 5, Matching 4 6, Matching 9 11, Matching 10 12]
                 assertEqual findAllReError res $ findAllRe re "baaaaacadaaae"
                 assertEqual findAllReError [] $ findAllRe re ""
             ,
             testCase "{2,} Eager" $ do
-                let re = Repeat Eager 2 Nothing (atom 'a')
+                let re = Repeat 2 Nothing Eager (atom 'a')
                 assertEqual findAllReError [] $ findAllRe re ""
                 assertEqual findAllReError [Matching 0 3, Matching 1 3] $ findAllRe re "aaa"
             ,
             testCase "{2,} Lazy" $ do
-                let re = Repeat Lazy 2 Nothing (atom 'a')
+                let re = Repeat 2 Nothing Lazy (atom 'a')
                 assertEqual findAllReError [] $ findAllRe re ""
                 assertEqual findAllReError [Matching 0 2, Matching 1 3] $ findAllRe re "aaa"
         ] ++
         
         map (\e -> testCase ("{1, 4}+Concat " ++ show e) $ do
-            let re = Concat (atom 'b') $ Concat (Repeat e 1 (Just 4) (atom 'a')) (atom 'c')
+            let re = Concat (atom 'b') $ Concat (Repeat 1 (Just 4) e (atom 'a')) (atom 'c')
             assertEqual findAllReError [Matching 1 6] $ findAllRe re "ebaaacd"
         ) [Lazy, Eager]
     )

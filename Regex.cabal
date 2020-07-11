@@ -16,13 +16,13 @@ library
         Matching
         Parser
         DataTypes
-    default-language: Haskell2010
-    build-depends:    base >=4.13 && <4.14
+
     default-language: Haskell2010
     build-depends:
         base >=4.13 && <4.14,
-        mtl >=2.2
-
+        base >=4.13 && <4.14,
+        mtl >=2.2,
+        transformers >=0.5.6
 
 test-suite Regex-test
     type:             exitcode-stdio-1.0
@@ -32,10 +32,12 @@ test-suite Regex-test
         MatchingTest
         DataTypes
         Matching
+
+    default-language: Haskell2010
     build-depends:
         base >=4.13 && <4.14,
         test-framework >=0.8.2,
         test-framework-hunit >=0.3,
         HUnit >=1.6,
-        mtl >=2.2
-    default-language: Haskell2010
+        mtl >=2.2,
+        transformers >=0.5.6

@@ -46,14 +46,14 @@ match (Concat re1 re2) cur sc fc =
     match re1 cur (\cur' -> match re2 cur' sc) fc
 match (Or re1 re2) cur sc fc =
     match re1 cur sc (match re2 cur sc fc)
-match (Repeat _ 0 (Just 0) _) cur sc fc = sc cur fc
-match (Repeat _ _ (Just 0) _) _ _ fc = fc
-match (Repeat Eager 0 m re) cur sc fc = match re cur cont $ sc cur fc where
-    cont cur' = match (Repeat Eager 0 (decr m) re) cur' sc
-match (Repeat Lazy 0 m re) cur sc fc = sc cur $ match re cur cont fc where
-    cont cur' = match (Repeat Lazy 0 (decr m) re) cur' sc
-match (Repeat e n m re) cur sc fc = match re cur cont fc where
-    cont cur' = match (Repeat e (n-1) (decr m) re) cur' sc
+match (Repeat 0 (Just 0) _ _) cur sc fc = sc cur fc
+match (Repeat _ (Just 0) _ _) _ _ fc = fc
+match (Repeat 0 m Eager re) cur sc fc = match re cur cont $ sc cur fc where
+    cont cur' = match (Repeat 0 (decr m) Eager re) cur' sc
+match (Repeat 0 m Lazy re) cur sc fc = sc cur $ match re cur cont fc where
+    cont cur' = match (Repeat 0 (decr m) Lazy re) cur' sc
+match (Repeat n m e re) cur sc fc = match re cur cont fc where
+    cont cur' = match (Repeat (n-1) (decr m) e re) cur' sc
 match BOS cur sc fc
     | curPos cur == 0 = sc cur fc
     | otherwise = fc
