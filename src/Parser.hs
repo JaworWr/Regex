@@ -8,23 +8,42 @@ import Control.Monad.State
 import Control.Monad.Except
 import Text.Printf
 import Data.Char
+import Data.Maybe
 
 parse :: String -> Either ParseError Regex
-parse = evalStateT (pRegex <* guardEOF) . stringToCursor
+parse = evalStateT (pRegex <* guardEOS) . stringToCursor
 
 data ParseError = ParseError {
     errorPos :: Int,
-    errorDesc :: String
-}
+    errorInfo :: ParseErrorInfo
+} deriving (Eq, Show)
 
-instance Show ParseError where
-    show (ParseError p d) = printf "Parse error at position %d: %s" p d
+data ParseErrorInfo =
+    UnexpectedEOS |
+    ExpectedGot String (Maybe Char)
+    deriving (Eq, Show)
 
-curError :: String -> Cursor -> ParseError
-curError d cur = ParseError (curPos cur) d
+prettyError :: ParseError -> String
+prettyError (ParseError p i) = printf "Parse error at position %d: %s" p $ prettyErrorInfo i where
+    prettyErrorInfo :: ParseErrorInfo -> String
+    prettyErrorInfo UnexpectedEOS = "Unexpected end of input"
+    prettyErrorInfo (ExpectedGot e g) = printf "Expected %s, got %s" (prettyExpected e) (prettyGot g)
+    prettyExpected [] = "end of input"
+    prettyExpected [c] = show c
+    prettyExpected [c1, c2] = show c1 ++ " or " ++ show c2
+    prettyExpected (c:cs) = show c ++ ", " ++ prettyExpected cs
+    prettyGot = prettyExpected . maybeToList
 
 -- Basic parser type and helper functions
 type Parser = StateT Cursor (Either ParseError)
+
+throwParseError :: Int -> ParseErrorInfo -> Parser a
+throwParseError = (throwError .) . ParseError
+
+throwParseErrorAtPos :: ParseErrorInfo -> Parser a
+throwParseErrorAtPos i = do
+    p <- pGetPos
+    throwParseError p i
 
 pPeekChar :: Parser (Maybe Char)
 pPeekChar = gets peekChar
@@ -33,9 +52,7 @@ pGetPos :: Parser Int
 pGetPos = gets curPos
 
 fromJustWithEOF :: Maybe a -> Parser a
-fromJustWithEOF m = do
-    p <- pGetPos
-    maybe (throwError $ ParseError p "Unexpected end of input") return m
+fromJustWithEOF = maybe (throwParseErrorAtPos UnexpectedEOS) return
 
 pGetChar :: Parser Char
 pGetChar = pPeekChar >>= fromJustWithEOF
@@ -49,12 +66,15 @@ pPopChar = do
     put cur'
     return c
 
-guardEOF :: Parser ()
-guardEOF = pPeekChar >>= \case
-    Just c -> do
-        p <- pGetPos
-        throwError . ParseError p $ printf "Unexpected '%c', expected end of input" c
-    Nothing -> return ()
+guardEOS :: Parser ()
+guardEOS = do
+    c <- pPeekChar
+    when (isJust c) . throwParseErrorAtPos $ ExpectedGot [] c
+
+guardChar :: Char -> Parser ()
+guardChar c = do
+    c' <- pPeekChar
+    when (c' /= Just c) . throwParseErrorAtPos $ ExpectedGot [c] c'
 
 -- Atomic parsers
 pAtomic :: Parser Regex
