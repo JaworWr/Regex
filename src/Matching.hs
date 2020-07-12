@@ -4,38 +4,27 @@ import DataTypes
 
 import Data.Maybe
 import Data.List
-import Data.Hashable
-import qualified Data.HashSet as H
 
 data Matching = Matching { matchingStart :: Int, matchingEnd :: Int } deriving (Eq, Show)
-
-instance Hashable Matching where
-    hashWithSalt salt (Matching s e) = hashWithSalt salt (s, e)
-
-nubHashable :: (Eq a, Hashable a) => [a] -> [a]
-nubHashable = aux H.empty where
-    aux _ [] = []
-    aux s (x:xs) 
-        | x `H.member` s = aux s xs
-        | otherwise = x : aux (H.insert x s) xs
 
 matchingLen :: Matching -> Int
 matchingLen m = matchingEnd m - matchingStart m
 
 findAllRe :: Regex -> String -> [Matching]
-findAllRe re s = nubHashable $ aux (stringToCursor s) where
-    sc cur cur' fc' = maybe (m:fc') (((m:fc')++) . aux) $ dropChar cur where
-        m = Matching (curPos cur) (curPos cur')
-    fc cur = maybe [] aux $ dropChar cur
-    aux cur = match re cur (sc cur) (fc cur)
-
-findNonoverlappingRe :: Regex -> String -> [Matching]
-findNonoverlappingRe re s = aux (stringToCursor s) where
+findAllRe re s = aux (stringToCursor s) where
     sc cur cur' fc'
         | eos cur' = [m]
+        | curPos cur == curPos cur' = m:fc cur
         | otherwise = m:aux cur'
         where
             m = Matching (curPos cur) (curPos cur')
+    fc cur = maybe [] aux $ dropChar cur
+    aux cur = match re cur (sc cur) (fc cur)
+
+findAllPosRe :: Regex -> String -> [Matching]
+findAllPosRe re s = aux (stringToCursor s) where
+    sc cur cur' fc' = maybe [m] ((m:) . aux) $ dropChar cur where
+        m = Matching (curPos cur) (curPos cur')
     fc cur = maybe [] aux $ dropChar cur
     aux cur = match re cur (sc cur) (fc cur)
 

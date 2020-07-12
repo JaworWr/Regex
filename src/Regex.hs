@@ -7,10 +7,10 @@ module Regex (
     matchingEnd, 
     matchingLen,
     findAllRe,
-    findNonoverlappingRe,
+    findAllPosRe,
     searchRe,
     findAll,
-    findNonoverlapping,
+    findAllPos,
     search
 ) where
 
@@ -19,7 +19,7 @@ import Matching
 import Parser
 
 findAll = parseAndThen findAllRe
-findNonoverlapping = parseAndThen findNonoverlappingRe
+findAllPos = parseAndThen findAllPosRe
 search = parseAndThen searchRe
 
 parseAndThen :: (Regex -> String -> a) -> String -> String -> Either ParseError a
