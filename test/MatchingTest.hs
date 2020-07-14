@@ -123,4 +123,11 @@ tests = testGroup "Matching" [
     testCase "Nonoverlapping" $ do
         let re = Concat (Concat (atom 'a') (atom 'b')) (atom 'a')
         assertEqual errorMsg [Matching 0 3, Matching 4 7] $ findAllRe re "abababa"
+    ,
+    testCase "Lazy" $ do
+        let re = Concat (atom 'a') (atom 'b')
+        let res = take 3 . findAllRe re . concat $ repeat "cab"
+        assertEqual errorMsg [Matching 1 3, Matching 4 6, Matching 7 9] res
+        let res = take 3 . findAllPosRe re . concat $ repeat "cab"
+        assertEqual errorMsg [Matching 1 3, Matching 4 6, Matching 7 9] res
     ]
