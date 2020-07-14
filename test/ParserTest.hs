@@ -63,4 +63,25 @@ tests = testGroup "Parser" [
         case parse "a*+" of
             Left (ParseError 2 MultipleRepeats) -> return ()
             res -> assertFailure $ parseResultError "a*" res
+    ,
+    testCase "Concat" $ case parse "abc" of
+            Right (Concat 
+                    (Concat (Atom (AtomPredicate _ "'a'")) (Atom (AtomPredicate _ "'b'")))
+                    (Atom (AtomPredicate _ "'c'"))
+                ) -> return ()
+            res -> assertFailure $ parseResultError "abc" res
+    ,
+    testCase "Or" $ case parse "ab|c" of
+        Right (Or 
+                (Concat (Atom (AtomPredicate _ "'a'")) (Atom (AtomPredicate _ "'b'")))
+                (Atom (AtomPredicate _ "'c'"))
+            ) -> return ()
+        res -> assertFailure $ parseResultError "ab|c" res
+    ,
+    testCase "Parentheses" $ case parse "a(b|c)" of
+        Right (Concat 
+                (Atom (AtomPredicate _ "'a'"))
+                (Or (Atom (AtomPredicate _ "'b'")) (Atom (AtomPredicate _ "'c'")))
+            ) -> return ()
+        res -> assertFailure $ parseResultError "a(b|c)" res
     ]
