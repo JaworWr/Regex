@@ -4,6 +4,7 @@
 {-# LANGUAGE MonoLocalBinds #-}
 {-# LANGUAGE KindSignatures #-}
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE BangPatterns #-}
 
 module Parser where
 
@@ -115,6 +116,15 @@ escapedPredicate 'S' = return $ AtomPredicate (not . isSpace) "non-whitespace"
 escapedPredicate 'w' = return $ AtomPredicate isAlpha "word"
 escapedPredicate 'W' = return $ AtomPredicate (not . isAlpha) "non-word"
 escapedPredicate _ = Nothing
+
+pInteger :: OptionalParser Int
+pInteger = pPeekChar >>= \case
+    Just c | isDigit c -> pDropChar >> pIntTail (digitToInt c)
+    _ -> mzero
+    where
+        pIntTail !x = pPeekChar >>= \case
+            Just c | isDigit c -> pDropChar >> pIntTail (10 * x + digitToInt c)
+            _ -> return x
 
 pEagerness :: OptionalParser Eagerness
 pEagerness = pPeekChar >>= \case

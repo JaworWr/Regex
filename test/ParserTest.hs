@@ -1,6 +1,7 @@
 module ParserTest (tests) where
 
 import Control.Monad
+import Control.Monad.State
 
 import Test.Framework (testGroup)
 import Test.Framework.Providers.HUnit
@@ -84,4 +85,18 @@ tests = testGroup "Parser" [
                 (Or (Atom (AtomPredicate _ "'b'")) (Atom (AtomPredicate _ "'c'")))
             ) -> return ()
         res -> assertFailure $ parseResultError "a(b|c)" res
+    ,
+    testCase "Integer" $ do
+        assertEqual "Wrong parse result"
+            (evalStateT (fromOptional pInteger) $ stringToCursor "123")
+            (Right $ Just 123)
+        assertEqual "Wrong parse result"
+            (evalStateT (fromOptional pInteger) $ stringToCursor "0123")
+            (Right $ Just 123)
+        assertEqual "Wrong parse result"
+            (evalStateT (fromOptional pInteger) $ stringToCursor "123a")
+            (Right $ Just 123)
+        assertEqual "Wrong parse result"
+            (evalStateT (fromOptional pInteger) $ stringToCursor "a123")
+            (Right Nothing)
     ]
