@@ -131,11 +131,22 @@ pEagerness = pPeekChar >>= \case
     Just '?' -> pDropChar >> return Lazy
     _ -> return Eager
 
+pRepeats :: Parser (Eagerness -> Regex -> Regex)
+pRepeats = do
+    x <- fromMaybe 0 <$> fromOptional pInteger
+    pPeekChar >>= \case
+        Just ',' -> do
+            pDropChar
+            y <- fromOptional pInteger
+            return $ Repeat x y
+        _ -> return $ Repeat x (Just x)
+
 pModifier :: Parser (Maybe (Regex -> Regex))
 pModifier = pPeekChar >>= fromOptional . \case
     Just '*' -> pDropChar >> Repeat 0 Nothing <$> pEagerness
     Just '+' -> pDropChar >> Repeat 1 Nothing <$> pEagerness
     Just '?' -> pDropChar >> Repeat 0 (Just 1) <$> pEagerness
+    Just '{' -> pDropChar >> (lift pRepeats <* guardChar '}' <* pDropChar) <*> pEagerness
     _ -> mzero
 
 pAtomicWithModifier :: Parser Regex

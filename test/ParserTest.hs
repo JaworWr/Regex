@@ -99,4 +99,46 @@ tests = testGroup "Parser" [
         assertEqual "Wrong parse result"
             (evalStateT (fromOptional pInteger) $ stringToCursor "a123")
             (Right Nothing)
+    ,
+    testCase "AtomRepeats" $ do
+        case parse "a{5}" of
+            Right (Repeat 5 (Just 5) Eager _) -> return ()
+            res -> assertFailure $ parseResultError "a{5}" res
+        case parse "a{5}?" of
+            Right (Repeat 5 (Just 5) Lazy _) -> return ()
+            res -> assertFailure $ parseResultError "a{5}" res
+        case parse "a{5,7}" of
+            Right (Repeat 5 (Just 7) Eager _) -> return ()
+            res -> assertFailure $ parseResultError "a{5,7}" res
+        case parse "a{5,7}?" of
+            Right (Repeat 5 (Just 7) Lazy _) -> return ()
+            res -> assertFailure $ parseResultError "a{5,7}?" res
+        case parse "a{5,}" of
+            Right (Repeat 5 Nothing Eager _) -> return ()
+            res -> assertFailure $ parseResultError "a{5,}" res
+        case parse "a{5,}?" of
+            Right (Repeat 5 Nothing Lazy _) -> return ()
+            res -> assertFailure $ parseResultError "a{5,}?" res
+        case parse "a{,7}" of
+            Right (Repeat 0 (Just 7) Eager _) -> return ()
+            res -> assertFailure $ parseResultError "a{,7}" res
+        case parse "a{,7}?" of
+            Right (Repeat 0 (Just 7) Lazy _) -> return ()
+            res -> assertFailure $ parseResultError "a{,7}?" res
+        case parse "a{5" of
+            Left _ -> return ()
+            res -> assertFailure $ parseResultError "a{5" res
+        case parse "a{5c}" of
+            Left _ -> return ()
+            res -> assertFailure $ parseResultError "a{5c}" res
+    ,
+    testGroup "Concat + Modifiers" [
+        testCase "Star" $ case parse "a*b" of
+            Right (Concat (Repeat 0 Nothing Eager _) (Atom _)) -> return ()
+            res -> assertFailure $ parseResultError "a*b" res
+        ,
+        testCase "Repeats" $ case parse "a{3,5}b" of
+            Right (Concat (Repeat 3 (Just 5) Eager _) (Atom _)) -> return ()
+            res -> assertFailure $ parseResultError "a{3,5}b" res
+        ]   
     ]
