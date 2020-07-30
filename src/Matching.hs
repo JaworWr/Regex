@@ -49,7 +49,9 @@ match (Or re1 re2) cur sc fc =
 match (Repeat 0 (Just 0) _ _) cur sc fc = sc cur fc
 match (Repeat _ (Just 0) _ _) _ _ fc = fc
 match (Repeat 0 m Eager re) cur sc fc = match re cur cont $ sc cur fc where
-    cont cur' = match (Repeat 0 (decr m) Eager re) cur' sc
+    cont cur'
+        | curPos cur == curPos cur' = sc cur' -- prevents infinite looping
+        | otherwise = match (Repeat 0 (decr m) Eager re) cur' sc
 match (Repeat 0 m Lazy re) cur sc fc = sc cur $ match re cur cont fc where
     cont cur' = match (Repeat 0 (decr m) Lazy re) cur' sc
 match (Repeat n m e re) cur sc fc = match re cur cont fc where
