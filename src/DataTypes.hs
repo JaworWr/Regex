@@ -9,6 +9,24 @@ data AtomPredicate = AtomPredicate { atomPred :: Char -> Bool, atomPredDesc :: S
 instance Show AtomPredicate where
     show = atomPredDesc
 
+instance Semigroup AtomPredicate where
+    (AtomPredicate pr1 d1) <> (AtomPredicate pr2 d2) = let 
+        combinedDesc
+            | null d1 = d2
+            | null d2 = d1
+            | otherwise = d1 ++ "," ++ d2
+        in AtomPredicate (\a -> pr1 a || pr2 a) combinedDesc
+
+instance Monoid AtomPredicate where
+    mempty = AtomPredicate (const False) ""
+
+charPredicate :: Char -> AtomPredicate
+charPredicate c = AtomPredicate (== c) $ show c
+
+rangePredicate :: Char -> Char -> AtomPredicate
+rangePredicate c1 c2 = AtomPredicate (\a -> c1 <= a && a <= c2) $ 
+    "'" ++ [c1] ++ "-" ++ [c2] ++ "'"
+
 data Eagerness = Eager | Lazy deriving (Eq, Show)
 
 data Regex =

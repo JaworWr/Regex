@@ -29,6 +29,7 @@ test-suite Regex-test
     main-is:          RegexTest.hs
     hs-source-dirs:   test src
     other-modules:
+        DataTypesTest
         MatchingTest
         ParserTest
         DataTypes

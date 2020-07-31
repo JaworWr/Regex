@@ -2,6 +2,7 @@ module Regex (
     Regex(),
     ParseError(),
     parse,
+    prettyError,
     Matching(),
     matchingStart, 
     matchingEnd, 
