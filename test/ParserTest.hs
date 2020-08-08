@@ -140,5 +140,9 @@ tests = testGroup "Parser" [
         testCase "Repeats" $ case parse "a{3,5}b" of
             Right (Concat (Repeat 3 (Just 5) Eager _) (Atom _)) -> return ()
             res -> assertFailure $ parseResultError "a{3,5}b" res
-        ]   
+        ]
+    ,
+    testCase "Character group" $ case parse "[-a\\-5-9\\du-]" of
+        Right (Atom (AtomPredicate _ "'-','a','-','5-9',digit,'u','-'")) -> return ()
+        res -> assertFailure $ parseResultError "[a\\-5-9\\du-]" res
     ]

@@ -16,6 +16,7 @@ import Control.Monad.Trans.Maybe
 import Text.Printf
 import Data.Char
 import Data.Maybe
+import Data.Monoid
 
 parse :: String -> Either ParseError Regex
 parse = evalStateT (pRegex <* guardEOS) . stringToCursor
@@ -28,7 +29,8 @@ data ParseError = ParseError {
 data ParseErrorInfo =
     Unexpected (Maybe Char) |
     ExpectedGot String (Maybe Char) |
-    MultipleRepeats 
+    MultipleRepeats |
+    IncorrectRange
     deriving (Eq, Show)
 
 prettyError :: ParseError -> String
@@ -93,20 +95,18 @@ guardChar c = do
     when (c' /= Just c) . throwParseErrorAtPos $ ExpectedGot [c] c'
 
 -- Atomic parsers
-pEscaped :: Parser Regex
-pEscaped = do
-    c <- pPopChar
-    maybe 
-        (return . Atom $ AtomPredicate (== c) $ show c)
-        (return . Atom)
-        (escapedPredicate c)
-
 pAtomic :: Parser Regex
 pAtomic = pPopChar >>= \case
     '\\' -> pEscaped
     '.' -> return . Atom $ AtomPredicate (const True) "wildcard"
     '(' -> pRegex <* guardChar ')' <* pDropChar
-    c -> return . Atom $ AtomPredicate (== c) $ show c
+    '[' -> pCharGroup <* guardChar ']' <* pDropChar
+    c -> return . Atom $ charPredicate c
+
+pEscaped :: Parser Regex
+pEscaped = do
+    c <- pPopChar
+    return . Atom . fromMaybe (charPredicate c) $ escapedPredicate c
 
 escapedPredicate :: Char -> Maybe AtomPredicate
 escapedPredicate 'd' = return $ AtomPredicate isDigit "digit"
@@ -117,6 +117,7 @@ escapedPredicate 'w' = return $ AtomPredicate isAlpha "word"
 escapedPredicate 'W' = return $ AtomPredicate (not . isAlpha) "non-word"
 escapedPredicate _ = Nothing
 
+-- Atom modifier parsers
 pInteger :: OptionalParser Int
 pInteger = pPeekChar >>= \case
     Just c | isDigit c -> pDropChar >> pIntTail (digitToInt c)
@@ -158,6 +159,40 @@ pAtomicWithModifier = do
     rep <- isJust <$> pModifier
     when rep $ throwParseError repPos MultipleRepeats
     return $ fromMaybe id m a
+
+-- Character group parser
+pCharGroup :: Parser Regex
+pCharGroup = Atom . mconcat <$> pCharGroupElems where
+    pCharGroupElems = fromOptional pCharGroupElem >>= \case
+        Just c -> (c:) <$> pCharGroupElems
+        Nothing -> return []
+
+pCharGroupElem :: OptionalParser AtomPredicate
+pCharGroupElem = pGetChar >>= \case
+    ']' -> mzero
+    '\\' -> do
+        pos <- pGetPos
+        pDropChar
+        c <- pPopChar
+        maybe (pCharGroupRange pos c) return $ escapedPredicate c
+    c -> do
+        pos <- pGetPos
+        pDropChar
+        pCharGroupRange pos c
+
+pCharGroupRange :: Int -> Char -> OptionalParser AtomPredicate
+pCharGroupRange pos c = pGetChar >>= \case
+    '-' -> pDropChar >> pGetChar >>= \case
+        ']' -> return $ charPredicate c <> charPredicate '-'
+        '\\' -> do
+            pDropChar
+            c1 <- pPopChar
+            case escapedPredicate c1 of
+                Nothing -> maybe (throwParseError pos IncorrectRange) return (rangePredicate c c1)
+                Just pr -> return $ charPredicate c <> charPredicate '-' <> pr
+        c1 -> pDropChar >> 
+            maybe (throwParseError pos IncorrectRange) return (rangePredicate c c1)
+    _ -> return $ charPredicate c
 
 -- Intermediate parsers
 pConcat :: Parser Regex
