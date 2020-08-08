@@ -23,9 +23,11 @@ instance Monoid AtomPredicate where
 charPredicate :: Char -> AtomPredicate
 charPredicate c = AtomPredicate (== c) $ show c
 
-rangePredicate :: Char -> Char -> AtomPredicate
-rangePredicate c1 c2 = AtomPredicate (\a -> c1 <= a && a <= c2) $ 
-    "'" ++ [c1] ++ "-" ++ [c2] ++ "'"
+rangePredicate :: Char -> Char -> Maybe AtomPredicate
+rangePredicate c1 c2 
+    | c1 <= c2 = Just . AtomPredicate (\a -> c1 <= a && a <= c2) $ 
+        "'" ++ [c1] ++ "-" ++ [c2] ++ "'"
+    | otherwise = Nothing
 
 data Eagerness = Eager | Lazy deriving (Eq, Show)
 
