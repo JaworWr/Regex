@@ -101,6 +101,8 @@ pAtomic = pPopChar >>= \case
     '.' -> return . Atom $ AtomPredicate (const True) "wildcard"
     '(' -> pRegex <* guardChar ')' <* pDropChar
     '[' -> pCharGroup <* guardChar ']' <* pDropChar
+    '^' -> return BOS
+    '$' -> return EOS
     c -> return . Atom $ charPredicate c
 
 pEscaped :: Parser Regex

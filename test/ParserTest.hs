@@ -81,6 +81,10 @@ tests = testGroup "Parser" [
         testRepeat 0 (Just 1) Lazy "a??"
         testParseError 2 MultipleRepeats "a*+"
     ,
+    testCase "SpecialAtoms" $ do
+        testRegex BOS "^"
+        testRegex EOS "$"
+    ,
     testCase "Concat" $
     let re = Concat 
             (Concat (mockAtom "'a'") (mockAtom "'b'"))
@@ -128,5 +132,5 @@ tests = testGroup "Parser" [
         ]
     ,
     testCase "Character group" $
-        testRegex (mockAtom "'-','a','-','5-9',digit,'u','-'") "[-a\\-5-9\\du-]"
+        testRegex (mockAtom "'-','a','-','5-9',digit,'u','[','-'") "[-a\\-5-9\\du[-]"
     ]
