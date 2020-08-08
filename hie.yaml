@@ -17,4 +17,9 @@ cradle:
         cradle:
           cabal:
             component: "test:Regex-test"
+    - path: ./hrep
+      config:
+        cradle:
+          cabal:
+            component: "exe:hrep"
     
