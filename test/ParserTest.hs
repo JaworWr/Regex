@@ -1,3 +1,5 @@
+{-# LANGUAGE StandaloneDeriving #-}
+
 module ParserTest (tests) where
 
 import Control.Monad
@@ -10,139 +12,121 @@ import Test.HUnit
 import DataTypes
 import Parser
 
-testAtom desc res = case res of
-    Right (Atom (AtomPredicate pr s)) | s == desc -> return pr
-    _ -> assertFailure $ "Wrong parse result for atom " ++ desc ++ ": " ++ show res
-
 atomPredErr desc i = "Wrong predicate result for atom " ++ desc ++ ", input " ++ show i
 parseResultError i res = "Wrong parse result for input " ++ show i ++ ": " ++ show res
 
+instance Eq AtomPredicate where
+    (AtomPredicate pr1 d1) == (AtomPredicate pr2 d2) = d1 == d2
+deriving instance Eq Regex
+
+mockAtom :: String -> Regex
+mockAtom desc = Atom (AtomPredicate undefined desc)
+
+testGetAtom :: String -> String -> IO (Char -> Bool)
+testGetAtom desc s = case parse s of
+    Right (Atom (AtomPredicate pr s1)) | s1 == desc -> return pr
+    res -> assertFailure $ "Wrong parse result for atom " ++ desc ++ ": " ++ show res
+
+testRepeat :: Int -> Maybe Int -> Eagerness -> String -> IO ()
+testRepeat n m e s = case parse s of
+    Right (Repeat n1 m1 e1 _)
+        | n1 == n && m1 == m && e1 == e -> return ()
+    res -> assertFailure $ parseResultError s res
+
+testParseError :: Int -> ParseErrorInfo -> String -> IO ()
+testParseError pos info s = case parse s of
+    Left (ParseError pos1 info1)
+        | pos == pos1 && info == info1 -> return ()
+    res -> assertFailure $ parseResultError s res
+
+testParser :: (Eq a, Show a) => Parser a -> a -> String -> IO ()
+testParser p x s = case evalStateT p $ stringToCursor s of
+    Right x1 | x1 == x -> return ()
+    res -> assertFailure $ parseResultError s res
+
+testRegex :: Regex -> String -> IO ()
+testRegex = testParser pRegex
+
 tests = testGroup "Parser" [
     testCase "Atom" $ do 
-        pr <- testAtom "'a'" (parse "a")
+        pr <- testGetAtom "'a'" "a"
         assertBool (atomPredErr "'a'" 'a') $ pr 'a'
         assertBool (atomPredErr "'a'" 'b') $ not $ pr 'b'
 
-        void $ testAtom "'.'" (parse "\\.")
-        void $ testAtom "wildcard" (parse ".")
+        void $ testGetAtom "'.'" "\\."
+        void $ testGetAtom "wildcard" "."
     ,
     testGroup "CharTypes" $ 
-        let testData = [
-                ("\\d", [True, False, False], "digit"),
-                ("\\D", [False, True, True], "non-digit"),
-                ("\\s", [False, True, False], "whitespace"),
-                ("\\S", [True, False, True], "non-whitespace"),
-                ("\\w", [False, False, True], "word"),
-                ("\\W", [True, True, False], "non-word")
-                ]
-            singlePredTest desc pr i =
-                assertEqual (atomPredErr desc i) (pr i)
-            runTest (s, res, desc) = testCase desc $ do
-                pr <- testAtom desc (parse s)
-                zipWithM_ (singlePredTest desc pr) ['1', ' ', 'a'] res
-            in map runTest testData
+    let testData = [
+            ("\\d", [True, False, False], "digit"),
+            ("\\D", [False, True, True], "non-digit"),
+            ("\\s", [False, True, False], "whitespace"),
+            ("\\S", [True, False, True], "non-whitespace"),
+            ("\\w", [False, False, True], "word"),
+            ("\\W", [True, True, False], "non-word")
+            ]
+        singlePredTest desc pr i =
+            assertEqual (atomPredErr desc i) (pr i)
+        runTest (s, res, desc) = testCase desc $ do
+            pr <- testGetAtom desc s
+            zipWithM_ (singlePredTest desc pr) ['1', ' ', 'a'] res
+    in map runTest testData
     ,
     testCase "AtomModifiers" $ do
-        case parse "a*" of
-            Right (Repeat 0 Nothing Eager _) -> return ()
-            res -> assertFailure $ parseResultError "a*" res
-        case parse "a+" of
-            Right (Repeat 1 Nothing Eager _) -> return ()
-            res -> assertFailure $ parseResultError "a+" res
-        case parse "a?" of
-            Right (Repeat 0 (Just 1) Eager _) -> return ()
-            res -> assertFailure $ parseResultError "a?" res
-        case parse "a*?" of
-            Right (Repeat 0 Nothing Lazy _) -> return ()
-            res -> assertFailure $ parseResultError "a*?" res
-        case parse "a+?" of
-            Right (Repeat 1 Nothing Lazy _) -> return ()
-            res -> assertFailure $ parseResultError "a+?" res
-        case parse "a??" of
-            Right (Repeat 0 (Just 1) Lazy _) -> return ()
-            res -> assertFailure $ parseResultError "a??" res
-        case parse "a*+" of
-            Left (ParseError 2 MultipleRepeats) -> return ()
-            res -> assertFailure $ parseResultError "a*" res
+        testRepeat 0 Nothing Eager "a*"
+        testRepeat 1 Nothing Eager "a+"
+        testRepeat 0 (Just 1) Eager "a?"
+        testRepeat 0 Nothing Lazy "a*?"
+        testRepeat 1 Nothing Lazy "a+?"
+        testRepeat 0 (Just 1) Lazy "a??"
+        testParseError 2 MultipleRepeats "a*+"
     ,
-    testCase "Concat" $ case parse "abc" of
-            Right (Concat 
-                    (Concat (Atom (AtomPredicate _ "'a'")) (Atom (AtomPredicate _ "'b'")))
-                    (Atom (AtomPredicate _ "'c'"))
-                ) -> return ()
-            res -> assertFailure $ parseResultError "abc" res
+    testCase "Concat" $
+    let re = Concat 
+            (Concat (mockAtom "'a'") (mockAtom "'b'"))
+            (mockAtom "'c'")
+    in testRegex re "abc"
     ,
-    testCase "Or" $ case parse "ab|c" of
-        Right (Or 
-                (Concat (Atom (AtomPredicate _ "'a'")) (Atom (AtomPredicate _ "'b'")))
-                (Atom (AtomPredicate _ "'c'"))
-            ) -> return ()
-        res -> assertFailure $ parseResultError "ab|c" res
+    testCase "Or" $
+    let re = Or 
+            (Concat (mockAtom "'a'") (mockAtom "'b'"))
+            (mockAtom "'c'")
+    in testRegex re "ab|c"
     ,
-    testCase "Parentheses" $ case parse "a(b|c)" of
-        Right (Concat 
-                (Atom (AtomPredicate _ "'a'"))
-                (Or (Atom (AtomPredicate _ "'b'")) (Atom (AtomPredicate _ "'c'")))
-            ) -> return ()
-        res -> assertFailure $ parseResultError "a(b|c)" res
+    testCase "Parentheses" $
+    let re = Concat 
+            (mockAtom "'a'")
+            (Or (mockAtom "'b'") (mockAtom "'c'"))
+    in testRegex re "a(b|c)"
     ,
     testCase "Integer" $ do
-        assertEqual "Wrong parse result"
-            (evalStateT (fromOptional pInteger) $ stringToCursor "123")
-            (Right $ Just 123)
-        assertEqual "Wrong parse result"
-            (evalStateT (fromOptional pInteger) $ stringToCursor "0123")
-            (Right $ Just 123)
-        assertEqual "Wrong parse result"
-            (evalStateT (fromOptional pInteger) $ stringToCursor "123a")
-            (Right $ Just 123)
-        assertEqual "Wrong parse result"
-            (evalStateT (fromOptional pInteger) $ stringToCursor "a123")
-            (Right Nothing)
+        testParser (fromOptional pInteger) (Just 123) "123"
+        testParser (fromOptional pInteger) (Just 123) "0123"
+        testParser (fromOptional pInteger) (Just 123) "123a"
+        testParser (fromOptional pInteger) Nothing "a123"
     ,
     testCase "AtomRepeats" $ do
-        case parse "a{5}" of
-            Right (Repeat 5 (Just 5) Eager _) -> return ()
-            res -> assertFailure $ parseResultError "a{5}" res
-        case parse "a{5}?" of
-            Right (Repeat 5 (Just 5) Lazy _) -> return ()
-            res -> assertFailure $ parseResultError "a{5}" res
-        case parse "a{5,7}" of
-            Right (Repeat 5 (Just 7) Eager _) -> return ()
-            res -> assertFailure $ parseResultError "a{5,7}" res
-        case parse "a{5,7}?" of
-            Right (Repeat 5 (Just 7) Lazy _) -> return ()
-            res -> assertFailure $ parseResultError "a{5,7}?" res
-        case parse "a{5,}" of
-            Right (Repeat 5 Nothing Eager _) -> return ()
-            res -> assertFailure $ parseResultError "a{5,}" res
-        case parse "a{5,}?" of
-            Right (Repeat 5 Nothing Lazy _) -> return ()
-            res -> assertFailure $ parseResultError "a{5,}?" res
-        case parse "a{,7}" of
-            Right (Repeat 0 (Just 7) Eager _) -> return ()
-            res -> assertFailure $ parseResultError "a{,7}" res
-        case parse "a{,7}?" of
-            Right (Repeat 0 (Just 7) Lazy _) -> return ()
-            res -> assertFailure $ parseResultError "a{,7}?" res
-        case parse "a{5" of
-            Left _ -> return ()
-            res -> assertFailure $ parseResultError "a{5" res
-        case parse "a{5c}" of
-            Left _ -> return ()
-            res -> assertFailure $ parseResultError "a{5c}" res
+        testRepeat 5 (Just 5) Eager "a{5}"
+        testRepeat 5 (Just 5) Lazy "a{5}?"
+        testRepeat 5 (Just 7) Eager "a{5,7}"
+        testRepeat 5 (Just 7) Lazy "a{5,7}?"
+        testRepeat 5 Nothing Eager "a{5,}"
+        testRepeat 5 Nothing Lazy "a{5,}?"
+        testRepeat 0 (Just 7) Eager "a{,7}"
+        testRepeat 0 (Just 7) Lazy "a{,7}?"
+        testParseError 3 (ExpectedGot "}" Nothing) "a{5"
+        testParseError 3 (ExpectedGot "}" (Just 'c')) "a{5c}"
     ,
     testGroup "Concat + Modifiers" [
-        testCase "Star" $ case parse "a*b" of
-            Right (Concat (Repeat 0 Nothing Eager _) (Atom _)) -> return ()
-            res -> assertFailure $ parseResultError "a*b" res
+        testCase "Star" $
+        let re = Concat (Repeat 0 Nothing Eager (mockAtom "'a'")) (mockAtom "'b'")
+        in testRegex re "a*b"
         ,
-        testCase "Repeats" $ case parse "a{3,5}b" of
-            Right (Concat (Repeat 3 (Just 5) Eager _) (Atom _)) -> return ()
-            res -> assertFailure $ parseResultError "a{3,5}b" res
+        testCase "Repeats" $
+        let re = Concat (Repeat 3 (Just 5) Eager (mockAtom "'a'")) (mockAtom "'b'")
+        in testRegex re "a{3,5}b"
         ]
     ,
-    testCase "Character group" $ case parse "[-a\\-5-9\\du-]" of
-        Right (Atom (AtomPredicate _ "'-','a','-','5-9',digit,'u','-'")) -> return ()
-        res -> assertFailure $ parseResultError "[a\\-5-9\\du-]" res
+    testCase "Character group" $
+        testRegex (mockAtom "'-','a','-','5-9',digit,'u','-'") "[-a\\-5-9\\du-]"
     ]

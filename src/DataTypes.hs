@@ -10,11 +10,11 @@ instance Show AtomPredicate where
     show = atomPredDesc
 
 instance Semigroup AtomPredicate where
-    (AtomPredicate pr1 d1) <> (AtomPredicate pr2 d2) = let 
-        combinedDesc
-            | null d1 = d2
-            | null d2 = d1
-            | otherwise = d1 ++ "," ++ d2
+    (AtomPredicate pr1 d1) <> (AtomPredicate pr2 d2) =
+        let combinedDesc
+                | null d1 = d2
+                | null d2 = d1
+                | otherwise = d1 ++ "," ++ d2
         in AtomPredicate (\a -> pr1 a || pr2 a) combinedDesc
 
 instance Monoid AtomPredicate where
