@@ -23,6 +23,12 @@ tests = testGroup "Matching" [
         assertEqual errorMsg [Matching 0 1] $ findAllRe re "abcd"
         assertEqual errorMsg [Matching 3 4] $ findAllRe re "bcda"
     ,
+    testCase "NegatedAtom" $ do
+        let re = Atom . negatePredicate $ charPredicate 'a'
+        assertEqual errorMsg [] $ findAllRe re ""
+        assertEqual errorMsg [Matching 0 1, Matching 1 2, Matching 2 3] $ findAllRe re "bcd"
+        assertEqual errorMsg [Matching 0 1, Matching 2 3, Matching 3 4] $ findAllRe re "bacd"
+    ,
     testCase "Multiple Atoms" $ do
         let re = Atom (AtomPredicate (`elem` "abc") "abc")
         assertEqual errorMsg [] $ findAllRe re ""

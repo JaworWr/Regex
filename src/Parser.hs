@@ -100,7 +100,11 @@ pAtomic = pPopChar >>= \case
     '\\' -> pEscaped
     '.' -> return . Atom $ AtomPredicate (const True) "wildcard"
     '(' -> pRegex <* guardChar ')' <* pDropChar
-    '[' -> pCharGroup <* guardChar ']' <* pDropChar
+    '[' -> do
+        postpr <- pGetChar >>= \case
+            '^' -> pDropChar >> return negatePredicate
+            _ -> return id
+        pCharGroup postpr <* guardChar ']' <* pDropChar
     '^' -> return BOS
     '$' -> return EOS
     c -> return . Atom $ charPredicate c
@@ -163,8 +167,8 @@ pAtomicWithModifier = do
     return $ fromMaybe id m a
 
 -- Character group parser
-pCharGroup :: Parser Regex
-pCharGroup = Atom . mconcat <$> pCharGroupElems where
+pCharGroup :: (AtomPredicate -> AtomPredicate) -> Parser Regex
+pCharGroup postpr = Atom . postpr . mconcat <$> pCharGroupElems where
     pCharGroupElems = fromOptional pCharGroupElem >>= \case
         Just c -> (c:) <$> pCharGroupElems
         Nothing -> return []

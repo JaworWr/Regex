@@ -29,6 +29,9 @@ rangePredicate c1 c2
         "'" ++ [c1] ++ "-" ++ [c2] ++ "'"
     | otherwise = Nothing
 
+negatePredicate :: AtomPredicate -> AtomPredicate
+negatePredicate (AtomPredicate pr d) = AtomPredicate (not . pr) ("NOT[" ++ d ++ "]")
+
 data Eagerness = Eager | Lazy deriving (Eq, Show)
 
 data Regex =

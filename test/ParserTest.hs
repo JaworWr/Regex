@@ -131,6 +131,13 @@ tests = testGroup "Parser" [
         in testRegex re "a{3,5}b"
         ]
     ,
-    testCase "Character group" $
+    testCase "Character group" $ do
         testRegex (mockAtom "'-','a','-','5-9',digit,'u','[','-'") "[-a\\-5-9\\du[-]"
+        testRegex (mockAtom "NOT['-','a','-','5-9',digit,'u','[','-']") "[^-a\\-5-9\\du[-]"
+        testRegex (mockAtom "'^'") "[\\^]"
+        testRegex (mockAtom "NOT['^']") "[^^]"
+    ,
+    testCase "Concat + Character group" $
+    let re = Concat (Concat (mockAtom "'a-e'") (mockAtom "'f','g'")) (mockAtom "'h'")
+    in testRegex re "[a-e][fg]h" 
     ]
