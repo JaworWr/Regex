@@ -27,7 +27,7 @@ printMatchings line = mapM_ printMatching . toMatchingParts 0 line where
         in [Unmatched (T.pack p1) | not (null p1)] ++ 
             [Matched (T.pack p2) | not (null p2)] ++ 
             toMatchingParts (matchingEnd m) s2 ms
-    printMatching (Matched s) = putChunk . fore red . chunk $ s
+    printMatching (Matched s) = putChunk . bold . fore red . chunk $ s
     printMatching (Unmatched s) = putChunk . chunk $ s
 
 handleIOError = withExceptT show . ExceptT . tryIOError
