@@ -16,7 +16,7 @@ atomPredErr desc i = "Wrong predicate result for atom " ++ desc ++ ", input " ++
 parseResultError i res = "Wrong parse result for input " ++ show i ++ ": " ++ show res
 
 instance Eq AtomPredicate where
-    (AtomPredicate pr1 d1) == (AtomPredicate pr2 d2) = d1 == d2
+    (AtomPredicate _ d1) == (AtomPredicate _ d2) = d1 == d2
 deriving instance Eq Regex
 
 mockAtom :: String -> Regex

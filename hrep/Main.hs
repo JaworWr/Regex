@@ -5,14 +5,10 @@ import System.Environment
 import System.IO
 import System.IO.Error
 import Rainbow
-import Data.Maybe
-import Data.Either
 import Data.List
 import qualified Data.Text as T
 import Control.Monad
 import Control.Monad.Except
-import Control.Monad.IO.Class
-import Control.Monad.Trans.Except
 
 import Regex
 

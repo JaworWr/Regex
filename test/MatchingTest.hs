@@ -1,7 +1,5 @@
 module MatchingTest (tests) where
 
-import Control.Monad
-
 import Test.Framework (testGroup)
 import Test.Framework.Providers.HUnit
 import Test.HUnit

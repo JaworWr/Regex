@@ -16,7 +16,6 @@ import Control.Monad.Trans.Maybe
 import Text.Printf
 import Data.Char
 import Data.Maybe
-import Data.Monoid
 
 parse :: String -> Either ParseError Regex
 parse = evalStateT (pRegex <* guardEOS) . stringToCursor
@@ -204,7 +203,7 @@ pCharGroupRange pos c = pGetChar >>= \case
 pConcat :: Parser Regex
 pConcat = pAtomicWithModifier >>= pConcatTail where
     pConcatTail re = pPeekChar >>= \case
-        Just c | c `notElem` ignored -> Concat re <$> pAtomicWithModifier >>= pConcatTail
+        Just c | c `notElem` ignored -> pAtomicWithModifier >>= pConcatTail . Concat re
         _ -> return re
     ignored = ")|"
 

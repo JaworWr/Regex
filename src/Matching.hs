@@ -3,7 +3,6 @@ module Matching where
 import DataTypes
 
 import Data.Maybe
-import Data.List
 
 data Matching = Matching { matchingStart :: Int, matchingEnd :: Int } deriving (Eq, Show)
 
@@ -12,7 +11,7 @@ matchingLen m = matchingEnd m - matchingStart m
 
 findAllRe :: Regex -> String -> [Matching]
 findAllRe re s = aux (stringToCursor s) where
-    sc cur cur' fc'
+    sc cur cur' _
         | eos cur' = [m]
         | curPos cur == curPos cur' = m:fc cur
         | otherwise = m:aux cur'
@@ -23,7 +22,7 @@ findAllRe re s = aux (stringToCursor s) where
 
 findAllPosRe :: Regex -> String -> [Matching]
 findAllPosRe re s = aux (stringToCursor s) where
-    sc cur cur' fc' = maybe [m] ((m:) . aux) $ dropChar cur where
+    sc cur cur' _ = maybe [m] ((m:) . aux) $ dropChar cur where
         m = Matching (curPos cur) (curPos cur')
     fc cur = maybe [] aux $ dropChar cur
     aux cur = match re cur (sc cur) (fc cur)
