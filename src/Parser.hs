@@ -9,6 +9,7 @@
 module Parser where
 
 import DataTypes
+import Atom
 
 import Control.Monad.State
 import Control.Monad.Except
@@ -97,29 +98,29 @@ guardChar c = do
 pAtomic :: Parser Regex
 pAtomic = pPopChar >>= \case
     '\\' -> pEscaped
-    '.' -> return . Atom $ AtomPredicate (const True) "wildcard"
+    '.' -> return $ Atom AtomWildcard
     '(' -> pRegex <* guardChar ')' <* pDropChar
     '[' -> do
         postpr <- pGetChar >>= \case
-            '^' -> pDropChar >> return negatePredicate
+            '^' -> pDropChar >> return AtomNot
             _ -> return id
         pCharGroup postpr <* guardChar ']' <* pDropChar
     '^' -> return BOS
     '$' -> return EOS
-    c -> return . Atom $ charPredicate c
+    c -> return . Atom $ AtomChar c
 
 pEscaped :: Parser Regex
 pEscaped = do
     c <- pPopChar
-    return . Atom . fromMaybe (charPredicate c) $ escapedPredicate c
+    return . Atom . fromMaybe (AtomChar c) $ escapedPredicate c
 
 escapedPredicate :: Char -> Maybe AtomPredicate
-escapedPredicate 'd' = return $ AtomPredicate isDigit "digit"
-escapedPredicate 'D' = return $ AtomPredicate (not . isDigit) "non-digit"
-escapedPredicate 's' = return $ AtomPredicate isSpace "whitespace"
-escapedPredicate 'S' = return $ AtomPredicate (not . isSpace) "non-whitespace"
-escapedPredicate 'w' = return $ AtomPredicate isAlpha "word"
-escapedPredicate 'W' = return $ AtomPredicate (not . isAlpha) "non-word"
+escapedPredicate 'd' = return AtomDigit
+escapedPredicate 'D' = return $ AtomNot AtomDigit
+escapedPredicate 's' = return AtomSpace
+escapedPredicate 'S' = return $ AtomNot AtomSpace
+escapedPredicate 'w' = return AtomAlpha
+escapedPredicate 'W' = return $ AtomNot AtomAlpha
 escapedPredicate _ = Nothing
 
 -- Atom modifier parsers
@@ -188,16 +189,16 @@ pCharGroupElem = pGetChar >>= \case
 pCharGroupRange :: Int -> Char -> OptionalParser AtomPredicate
 pCharGroupRange pos c = pGetChar >>= \case
     '-' -> pDropChar >> pGetChar >>= \case
-        ']' -> return $ charPredicate c <> charPredicate '-'
+        ']' -> return $ AtomChar c <> AtomChar '-'
         '\\' -> do
             pDropChar
             c1 <- pPopChar
             case escapedPredicate c1 of
-                Nothing -> maybe (throwParseError pos IncorrectRange) return (rangePredicate c c1)
-                Just pr -> return $ charPredicate c <> charPredicate '-' <> pr
+                Nothing -> maybe (throwParseError pos IncorrectRange) return (makeRange c c1)
+                Just pr -> return $ AtomChar c <> AtomChar '-' <> pr
         c1 -> pDropChar >> 
-            maybe (throwParseError pos IncorrectRange) return (rangePredicate c c1)
-    _ -> return $ charPredicate c
+            maybe (throwParseError pos IncorrectRange) return (makeRange c c1)
+    _ -> return $ AtomChar c
 
 -- Intermediate parsers
 pConcat :: Parser Regex
