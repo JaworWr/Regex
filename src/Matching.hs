@@ -1,6 +1,7 @@
 module Matching where
 
 import DataTypes
+import Atom
 
 import Data.Maybe
 
@@ -39,7 +40,7 @@ decr = fmap $ subtract 1
 
 match :: Regex -> Cursor -> Sc a -> Fc a -> a
 match (Atom ap) cur sc fc = case popChar cur of
-    Just (c, cur') | atomPred ap c -> sc cur' fc
+    Just (c, cur') | getPredicate ap c -> sc cur' fc
     _ -> fc
 match (Concat re1 re2) cur sc fc = 
     match re1 cur (\cur' -> match re2 cur' sc) fc
