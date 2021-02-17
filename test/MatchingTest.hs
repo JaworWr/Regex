@@ -6,9 +6,10 @@ import Test.HUnit
 
 import DataTypes
 import Matching
+import Atom
 
 atom :: Char -> Regex
-atom = Atom . charPredicate
+atom = Atom . AtomChar
 
 errorMsg = "Incorrect result."
 
@@ -22,19 +23,19 @@ tests = testGroup "Matching" [
         assertEqual errorMsg [Matching 3 4] $ findAllRe re "bcda"
     ,
     testCase "NegatedAtom" $ do
-        let re = Atom . negatePredicate $ charPredicate 'a'
+        let re = Atom . AtomNot $ AtomChar 'a'
         assertEqual errorMsg [] $ findAllRe re ""
         assertEqual errorMsg [Matching 0 1, Matching 1 2, Matching 2 3] $ findAllRe re "bcd"
         assertEqual errorMsg [Matching 0 1, Matching 2 3, Matching 3 4] $ findAllRe re "bacd"
     ,
     testCase "Multiple Atoms" $ do
-        let re = Atom (AtomPredicate (`elem` "abc") "abc")
+        let re = Atom (mconcat $ map AtomChar "abc")
         assertEqual errorMsg [] $ findAllRe re ""
         assertEqual errorMsg [] $ findAllRe re "def"
         assertEqual errorMsg [Matching 0 1, Matching 2 3, Matching 4 5] $ findAllRe re "adbec"
     ,
     testCase "Wildcard" $ do
-        let re = Atom (AtomPredicate (const True) "Wildcard")
+        let re = Atom AtomWildcard
         assertEqual errorMsg [] $ findAllRe re ""
         assertEqual errorMsg [Matching 0 1, Matching 1 2] $ findAllRe re "ab"
     ,

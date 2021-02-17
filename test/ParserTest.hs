@@ -1,5 +1,3 @@
-{-# LANGUAGE StandaloneDeriving #-}
-
 module ParserTest (tests) where
 
 import Control.Monad
@@ -11,21 +9,18 @@ import Test.HUnit
 
 import DataTypes
 import Parser
+import Atom
 
 atomPredErr desc i = "Wrong predicate result for atom " ++ desc ++ ", input " ++ show i
 parseResultError i res = "Wrong parse result for input " ++ show i ++ ": " ++ show res
 
-instance Eq AtomPredicate where
-    (AtomPredicate _ d1) == (AtomPredicate _ d2) = d1 == d2
-deriving instance Eq Regex
+charPredicate :: Char -> Regex
+charPredicate = Atom . AtomChar
 
-mockAtom :: String -> Regex
-mockAtom desc = Atom (AtomPredicate undefined desc)
-
-testGetAtom :: String -> String -> IO (Char -> Bool)
-testGetAtom desc s = case parse s of
-    Right (Atom (AtomPredicate pr s1)) | s1 == desc -> return pr
-    res -> assertFailure $ "Wrong parse result for atom " ++ desc ++ ": " ++ show res
+testGetAtom :: AtomPredicate ->  String -> IO (Char -> Bool)
+testGetAtom pr1 s = case parse s of
+    Right (Atom pr) | pr1 == pr -> return (getPredicate pr)
+    res -> assertFailure $ "Wrong parse result for atom " ++ s ++ ": " ++ show res
 
 testRepeat :: Int -> Maybe Int -> Eagerness -> String -> IO ()
 testRepeat n m e s = case parse s of
@@ -49,26 +44,28 @@ testRegex = testParser pRegex
 
 tests = testGroup "Parser" [
     testCase "Atom" $ do 
-        pr <- testGetAtom "'a'" "a"
+        pr <- testGetAtom (AtomChar 'a') "a"
+        assertEqual "Incorrect description" (show $ AtomChar 'a') "'a'"
         assertBool (atomPredErr "'a'" 'a') $ pr 'a'
         assertBool (atomPredErr "'a'" 'b') $ not $ pr 'b'
 
-        void $ testGetAtom "'.'" "\\."
-        void $ testGetAtom "wildcard" "."
+        void $ testGetAtom (AtomChar '.')  "\\."
+        void $ testGetAtom AtomWildcard  "."
     ,
     testGroup "CharTypes" $ 
     let testData = [
-            ("\\d", [True, False, False], "digit"),
-            ("\\D", [False, True, True], "non-digit"),
-            ("\\s", [False, True, False], "whitespace"),
-            ("\\S", [True, False, True], "non-whitespace"),
-            ("\\w", [False, False, True], "word"),
-            ("\\W", [True, True, False], "non-word")
+            ("\\d", [True, False, False], AtomDigit, "<digit>"),
+            ("\\D", [False, True, True], AtomNot AtomDigit, "NOT[<digit>]"),
+            ("\\s", [False, True, False], AtomSpace, "<whitespace>"),
+            ("\\S", [True, False, True], AtomNot AtomSpace, "NOT[<whitespace>]"),
+            ("\\w", [False, False, True], AtomAlpha, "<alphanumeric>"),
+            ("\\W", [True, True, False], AtomNot AtomAlpha, "NOT[<alphanumeric>]")
             ]
         singlePredTest desc pr i =
             assertEqual (atomPredErr desc i) (pr i)
-        runTest (s, res, desc) = testCase desc $ do
-            pr <- testGetAtom desc s
+        runTest (s, res, t, desc) = testCase desc $ do
+            assertEqual "Incorrect description" (show t) desc
+            pr <- testGetAtom t s
             zipWithM_ (singlePredTest desc pr) ['1', ' ', 'a'] res
     in map runTest testData
     ,
@@ -87,20 +84,20 @@ tests = testGroup "Parser" [
     ,
     testCase "Concat" $
     let re = Concat 
-            (Concat (mockAtom "'a'") (mockAtom "'b'"))
-            (mockAtom "'c'")
+            (Concat (charPredicate 'a') (charPredicate 'b'))
+            (charPredicate 'c')
     in testRegex re "abc"
     ,
     testCase "Or" $
     let re = Or 
-            (Concat (mockAtom "'a'") (mockAtom "'b'"))
-            (mockAtom "'c'")
+            (Concat (charPredicate 'a') (charPredicate 'b'))
+            (charPredicate 'c')
     in testRegex re "ab|c"
     ,
     testCase "Parentheses" $
     let re = Concat 
-            (mockAtom "'a'")
-            (Or (mockAtom "'b'") (mockAtom "'c'"))
+            (charPredicate 'a')
+            (Or (charPredicate 'b') (charPredicate 'c'))
     in testRegex re "a(b|c)"
     ,
     testCase "Integer" $ do
@@ -123,21 +120,22 @@ tests = testGroup "Parser" [
     ,
     testGroup "Concat + Modifiers" [
         testCase "Star" $
-        let re = Concat (Repeat 0 Nothing Eager (mockAtom "'a'")) (mockAtom "'b'")
+        let re = Concat (Repeat 0 Nothing Eager (charPredicate 'a')) (charPredicate 'b')
         in testRegex re "a*b"
         ,
         testCase "Repeats" $
-        let re = Concat (Repeat 3 (Just 5) Eager (mockAtom "'a'")) (mockAtom "'b'")
+        let re = Concat (Repeat 3 (Just 5) Eager (charPredicate 'a')) (charPredicate 'b')
         in testRegex re "a{3,5}b"
         ]
     ,
     testCase "Character group" $ do
-        testRegex (mockAtom "'-','a','-','5-9',digit,'u','[','-'") "[-a\\-5-9\\du[-]"
-        testRegex (mockAtom "NOT['-','a','-','5-9',digit,'u','[','-']") "[^-a\\-5-9\\du[-]"
-        testRegex (mockAtom "'^'") "[\\^]"
-        testRegex (mockAtom "NOT['^']") "[^^]"
+        let re = mconcat [AtomChar '-', AtomChar 'a', AtomChar '-', AtomRange '5' '9', AtomDigit , AtomChar 'u', AtomChar '[', AtomChar '-']
+        testRegex (Atom re) "[-a\\-5-9\\du[-]"
+        testRegex (Atom $ AtomNot re) "[^-a\\-5-9\\du[-]"
+        testRegex (charPredicate '^') "[\\^]"
+        testRegex (Atom $ AtomNot (AtomChar '^')) "[^^]"
     ,
     testCase "Concat + Character group" $
-    let re = Concat (Concat (mockAtom "'a-e'") (mockAtom "'f','g'")) (mockAtom "'h'")
+    let re = Concat (Concat (Atom $ AtomRange 'a' 'e') (Atom $ AtomChar 'f' <> AtomChar 'g')) (charPredicate 'h')
     in testRegex re "[a-e][fg]h" 
     ]

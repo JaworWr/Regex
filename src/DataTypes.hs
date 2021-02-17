@@ -14,7 +14,7 @@ data Regex =
     Repeat !Int !(Maybe Int) Eagerness Regex |
     BOS |
     EOS
-    deriving Show
+    deriving (Eq, Show)
 
 -- String cursor and helper functions
 data Cursor = Cursor { curPos :: !Int, curData :: String } deriving (Eq, Show)
