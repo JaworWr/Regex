@@ -16,6 +16,12 @@ data AtomPredicate =
     deriving Eq
 
 
+makeRange :: Char -> Char -> Maybe AtomPredicate
+makeRange c1 c2
+    | c1 <= c2 = Just $ AtomRange c1 c2
+    | otherwise = Nothing
+
+
 instance Show AtomPredicate where
     show (AtomChar c) = ['\'', c, '\'']
     show (AtomRange c1 c2) = ['\'', c1, '-', c2, '\'']
