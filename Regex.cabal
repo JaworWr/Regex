@@ -32,6 +32,7 @@ executable hrep
         Matching
         Parser
         DataTypes
+        Atom
     build-depends:
         base >=4.13 && <4.14,
         mtl >=2.2,
