@@ -8,7 +8,7 @@ data AtomPredicate =
     AtomRange Char Char |
     AtomWildcard |
     AtomNull |
-    AtomNeg AtomPredicate |
+    AtomNot AtomPredicate |
     AtomOr AtomPredicate AtomPredicate |
     AtomDigit |
     AtomSpace |
@@ -27,9 +27,7 @@ instance Show AtomPredicate where
     show (AtomRange c1 c2) = ['\'', c1, '-', c2, '\'']
     show AtomWildcard = "<wildcard>"
     show AtomNull = "<null>"
-    show (AtomNeg pr) = "NOT[" ++ show pr ++ "]"
-    show (AtomOr AtomNull pr2) = show pr2
-    show (AtomOr pr1 AtomNull) = show pr1
+    show (AtomNot pr) = "NOT[" ++ show pr ++ "]"
     show (AtomOr pr1 pr2) = show pr1 ++ "," ++ show pr2
     show AtomDigit = "<digit>"
     show AtomSpace = "<whitespace>"
@@ -37,7 +35,9 @@ instance Show AtomPredicate where
 
 
 instance Semigroup AtomPredicate where
-    (<>) = AtomOr
+    AtomNull <> pr1 = pr1
+    pr2 <> AtomNull = pr2
+    pr1 <> pr2 = AtomOr pr1 pr2
 
 instance Monoid AtomPredicate where
     mempty = AtomNull
@@ -47,7 +47,7 @@ getPredicate (AtomChar c) = (== c)
 getPredicate (AtomRange c1 c2) = \a -> c1 <= a && a <= c2 
 getPredicate AtomWildcard = const True 
 getPredicate AtomNull = const False
-getPredicate (AtomNeg pr) = not . getPredicate pr
+getPredicate (AtomNot pr) = not . getPredicate pr
 getPredicate (AtomOr pr1 pr2) = (||) <$> getPredicate pr1 <*> getPredicate pr2
 getPredicate AtomDigit = isDigit
 getPredicate AtomSpace = isSpace
