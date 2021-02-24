@@ -38,4 +38,21 @@ tests = testGroup "Atom" [
         assertEqual errorMsg (getPredicate <$> pr1 <*> Just '\n') $ Just False
         assertEqual errorMsg (getPredicate <$> pr2 <*> Just 'e') $ Just True
         assertEqual errorMsg (getPredicate <$> pr2 <*> Just 'c') $ Just False
+    ,
+    testCase "Ignore case" $ do
+        let pr1 = ignoreCase $ AtomChar 'A'
+        let pr2 = ignoreCase $ AtomRange 'B' 'E'
+        let pr3 = pr1 <> pr2
+
+        assertEqual errorMsg (show pr1) "'a'"
+        assertEqual errorMsg (show pr2) "'b-e'"
+
+        assertEqual errorMsg (getPredicate pr1 'a') True
+        assertEqual errorMsg (getPredicate pr1 'A') True
+        assertEqual errorMsg (getPredicate pr2 'c') True
+        assertEqual errorMsg (getPredicate pr2 'C') True
+        assertEqual errorMsg (getPredicate pr3 'a') True
+        assertEqual errorMsg (getPredicate pr3 'A') True
+        assertEqual errorMsg (getPredicate pr3 'c') True
+        assertEqual errorMsg (getPredicate pr3 'C') True
     ]

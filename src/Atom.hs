@@ -12,7 +12,9 @@ data AtomPredicate =
     AtomOr AtomPredicate AtomPredicate |
     AtomDigit |
     AtomSpace |
-    AtomAlpha
+    AtomAlpha |
+    AtomIChar Char |
+    AtomIRange Char Char
     deriving Eq
 
 
@@ -32,6 +34,8 @@ instance Show AtomPredicate where
     show AtomDigit = "<digit>"
     show AtomSpace = "<whitespace>"
     show AtomAlpha = "<alphanumeric>"
+    show (AtomIChar c) = show (AtomChar c)
+    show (AtomIRange c1 c2) = show (AtomRange c1 c2)
 
 
 instance Semigroup AtomPredicate where
@@ -41,6 +45,7 @@ instance Semigroup AtomPredicate where
 
 instance Monoid AtomPredicate where
     mempty = AtomNull
+
 
 getPredicate :: AtomPredicate -> Char -> Bool
 getPredicate (AtomChar c) = (== c)
@@ -52,3 +57,13 @@ getPredicate (AtomOr pr1 pr2) = (||) <$> getPredicate pr1 <*> getPredicate pr2
 getPredicate AtomDigit = isDigit
 getPredicate AtomSpace = isSpace
 getPredicate AtomAlpha = isAlpha
+getPredicate (AtomIChar c) = (== c) . toLower
+getPredicate (AtomIRange c1 c2) = (\a -> c1 <= a && a <= c2) . toLower
+
+
+ignoreCase :: AtomPredicate -> AtomPredicate
+ignoreCase (AtomChar c) = AtomIChar (toLower c)
+ignoreCase (AtomRange c1 c2) = AtomIRange (toLower c1) (toLower c2)
+ignoreCase (AtomNot pr) = AtomNot (ignoreCase pr)
+ignoreCase (AtomOr pr1 pr2) = AtomOr (ignoreCase pr1) (ignoreCase pr2)
+ignoreCase pr = pr
