@@ -34,3 +34,10 @@ dropChar = fmap snd . popChar
 
 stringToCursor :: String -> Cursor
 stringToCursor = Cursor 0
+
+ignoreCaseRegex :: Regex -> Regex
+ignoreCaseRegex (Atom pr) = Atom (ignoreCase pr)
+ignoreCaseRegex (Concat re1 re2) = Concat (ignoreCaseRegex re1) (ignoreCaseRegex re2)
+ignoreCaseRegex (Or re1 re2) = Or (ignoreCaseRegex re1) (ignoreCaseRegex re2)
+ignoreCaseRegex (Repeat n m e re) = Repeat n m e (ignoreCaseRegex re)
+ignoreCaseRegex re = re

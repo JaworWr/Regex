@@ -12,7 +12,8 @@ module Regex (
     searchRe,
     findAll,
     findAllPos,
-    search
+    search,
+    ignoreCaseRegex
 ) where
 
 import DataTypes
