@@ -39,6 +39,7 @@ prettyError (ParseError p i) = printf "Parse error at position %d: %s" p $ prett
     prettyErrorInfo (Unexpected g) = "Unexpected " ++ prettyGot g
     prettyErrorInfo (ExpectedGot e g) = printf "Expected %s, got %s" (prettyExpected e) (prettyGot g)
     prettyErrorInfo MultipleRepeats = "Multiple repeat modifiers"
+    prettyErrorInfo IncorrectRange = "Incorrect range"
     prettyExpected [] = "end of input"
     prettyExpected [c] = show c
     prettyExpected [c1, c2] = show c1 ++ " or " ++ show c2
